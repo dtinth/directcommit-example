@@ -52,8 +52,11 @@
         signInWithPopup,
         onAuthStateChanged,
       } from 'https://www.gstatic.com/firebasejs/9.8.4/firebase-auth.js'
+
+      // For converting between Base64 and Uint8Array
       import * as base64 from 'https://cdn.skypack.dev/@stablelib/base64'
 
+      // Allow backend URL to be configured via `?backend=...` query parameter
       const backendBase =
         new URLSearchParams(window.location.search).get('backend') ||
         'https://directcommit-production.up.railway.app'
@@ -72,20 +75,88 @@
       // Initialize Firebase
       const app = initializeApp(firebaseConfig)
       const auth = getAuth(app)
-
-      // Sign in with GitHub
       const provider = new GithubAuthProvider()
 
+      // Utilities
       const $ = document.querySelector.bind(document)
+
+      // We must keep track of the latest `sha` of the README file when updating
+      // the file, so any conflicting edits can be detected.
       let sha
 
-      $('#sign-in').addEventListener('click', () => {
-        signInWithPopup(auth, provider).catch((error) => {
+      // Load the latest content
+      async function loadContent() {
+        // Obtain the ID token from Firebase Auth
+        const idToken = await auth.currentUser.getIdToken()
+
+        // Request the file contents
+        const response = await fetch(
+          new URL(
+            'api/mountpoints/directcommit/contents/README.md',
+            backendBase,
+          ),
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          },
+        )
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`)
+        }
+        const data = await response.json()
+
+        // Keep track of the latest `sha` of the README file
+        sha = data.sha
+
+        // Decode the Base64 content
+        return new TextDecoder().decode(
+          base64.decode(data.content.replace(/\s/g, '')),
+        )
+      }
+
+      // Save the content
+      async function saveContent(content) {
+        // Obtain the ID token from Firebase Auth
+        const idToken = await auth.currentUser.getIdToken()
+
+        // Save the file contents
+        const response = await fetch(
+          new URL(
+            'api/mountpoints/directcommit/contents/README.md',
+            backendBase,
+          ),
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: 'Update README file',
+              content: base64.encode(new TextEncoder().encode(content)),
+              sha,
+            }),
+          },
+        )
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`)
+        }
+        const data = await response.json()
+
+        // Keep track of the latest `sha` of the README file for subsequent edits
+        sha = data.content.sha
+      }
+
+      // UI binding
+      $('#sign-in').addEventListener('click', async () => {
+        try {
+          await signInWithPopup(auth, provider)
+        } catch (error) {
           console.error(error)
           alert(`Unable to sign in: ${error.message}`)
-        })
+        }
       })
-
       onAuthStateChanged(auth, async (user) => {
         $('#loading').hidden = true
         $('#not-signed-in').hidden = !!user
@@ -93,62 +164,20 @@
         if (user) {
           $('#username').textContent = user.displayName || user.email
           try {
-            const idToken = await user.getIdToken()
-            const response = await fetch(
-              new URL(
-                'api/mountpoints/directcommit/contents/README.md',
-                backendBase,
-              ),
-              {
-                headers: {
-                  Authorization: `Bearer ${idToken}`,
-                },
-              },
-            )
-            if (!response.ok) {
-              throw new Error(`Request failed: ${response.status}`)
-            }
-            const data = await response.json()
-            $('#data').value = new TextDecoder().decode(
-              base64.decode(data.content.replace(/\s/g, '')),
-            )
+            const content = await loadContent()
+            $('#data').value = content
             $('#data').disabled = false
-            sha = data.sha
           } catch (error) {
             alert(`Unable to fetch README: ${error.message}`)
           }
         }
       })
-
       $('#edit').addEventListener('submit', async (event) => {
         try {
           event.preventDefault()
           $('#submit').disabled = true
           const content = $('#data').value
-          const idToken = await auth.currentUser.getIdToken()
-          const response = await fetch(
-            new URL(
-              'api/mountpoints/directcommit/contents/README.md',
-              backendBase,
-            ),
-            {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bearer ${idToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                message: 'Update README file',
-                content: base64.encode(new TextEncoder().encode(content)),
-                sha,
-              }),
-            },
-          )
-          if (!response.ok) {
-            throw new Error(`Request failed: ${response.status}`)
-          }
-          const data = await response.json()
-          sha = data.content.sha
+          await saveContent(content)
           alert('Saved! sha: ' + sha)
         } catch (error) {
           alert(`Unable to save README: ${error.message}`)
