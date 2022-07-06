@@ -1,89 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
-
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/9.8.4/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/9.8.4/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/9.8.4/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
-
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>directcommit example</title>
+    <style>
+      #data {
+        width: 100%;
+        box-sizing: border-box;
+        height: 90vh;
       }
     </style>
   </head>
   <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+    <div id="loading">
+      <h1>Loading…</h1>
     </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+    <div id="not-signed-in" hidden>
+      <h1>Not signed in</h1>
+      <button id="sign-in">Sign in with GitHub</button>
+    </div>
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+    <div id="app" hidden>
+      <h1>Signed in as <span id="username"></span></h1>
+      <button id="sign-out">Sign out</button>
+      <form id="edit">
+        Editing README file<br />
+        <textarea id="data" disabled>Loading...</textarea>
+        <button id="submit">Save</button>
+      </form>
+    </div>
+
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.8.4/firebase-app.js'
+      import {
+        getAuth,
+        GithubAuthProvider,
+        signInWithPopup,
+        onAuthStateChanged,
+      } from 'https://www.gstatic.com/firebasejs/9.8.4/firebase-auth.js'
+      import * as base64 from 'https://cdn.skypack.dev/@stablelib/base64'
+
+      const backendBase =
+        new URLSearchParams(window.location.search).get('backend') ||
+        'https://directcommit-production.up.railway.app'
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: 'AIzaSyDLDD_KtKkfAj9sgOHupxUuDt_p8g19bkU',
+        authDomain: 'fiery-react.firebaseapp.com',
+        databaseURL: 'https://fiery-react.firebaseio.com',
+        projectId: 'fiery-react',
+        storageBucket: 'fiery-react.appspot.com',
+        messagingSenderId: '284926450412',
+        appId: '1:284926450412:web:4e669315ebbd1cc163a3c9',
+      }
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig)
+      const auth = getAuth(app)
+
+      // Sign in with GitHub
+      const provider = new GithubAuthProvider()
+
+      const $ = document.querySelector.bind(document)
+      let sha
+
+      $('#sign-in').addEventListener('click', () => {
+        signInWithPopup(auth, provider).catch((error) => {
+          console.error(error)
+          alert(`Unable to sign in: ${error.message}`)
+        })
+      })
+
+      onAuthStateChanged(auth, async (user) => {
+        $('#loading').hidden = true
+        $('#not-signed-in').hidden = !!user
+        $('#app').hidden = !user
+        if (user) {
+          $('#username').textContent = user.displayName || user.email
+          try {
+            const idToken = await user.getIdToken()
+            const response = await fetch(
+              new URL(
+                'api/mountpoints/directcommit/contents/README.md',
+                backendBase,
+              ),
+              {
+                headers: {
+                  Authorization: `Bearer ${idToken}`,
+                },
+              },
+            )
+            if (!response.ok) {
+              throw new Error(`Request failed: ${response.status}`)
+            }
+            const data = await response.json()
+            $('#data').value = new TextDecoder().decode(
+              base64.decode(data.content.replace(/\s/g, '')),
+            )
+            $('#data').disabled = false
+            sha = data.sha
+          } catch (error) {
+            alert(`Unable to fetch README: ${error.message}`)
+          }
         }
-      });
+      })
+
+      $('#edit').addEventListener('submit', async (event) => {
+        try {
+          event.preventDefault()
+          $('#submit').disabled = true
+          const content = $('#data').value
+          const idToken = await auth.currentUser.getIdToken()
+          const response = await fetch(
+            new URL(
+              'api/mountpoints/directcommit/contents/README.md',
+              backendBase,
+            ),
+            {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${idToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                message: 'Update README file',
+                content: base64.encode(new TextEncoder().encode(content)),
+                sha,
+              }),
+            },
+          )
+          if (!response.ok) {
+            throw new Error(`Request failed: ${response.status}`)
+          }
+          const data = await response.json()
+          sha = data.content.sha
+          alert('Saved! sha: ' + sha)
+        } catch (error) {
+          alert(`Unable to save README: ${error.message}`)
+        } finally {
+          $('#submit').disabled = false
+        }
+      })
     </script>
   </body>
 </html>
