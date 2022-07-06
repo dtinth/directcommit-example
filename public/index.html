@@ -14,22 +14,32 @@
     </style>
   </head>
   <body>
+    <h1>directcommit example</h1>
+    <p>
+      <strong>Note:</strong> In this demo, all authenticated users can read
+      README.md, but only @dtinth can write to it.
+    </p>
+
     <div id="loading">
-      <h1>Loading…</h1>
+      <h2>Loading…</h2>
     </div>
 
     <div id="not-signed-in" hidden>
-      <h1>Not signed in</h1>
+      <h2>Not signed in</h2>
       <button id="sign-in">Sign in with GitHub</button>
     </div>
 
     <div id="app" hidden>
-      <h1>Signed in as <span id="username"></span></h1>
+      <h2>Signed in as <span id="username"></span></h2>
       <button id="sign-out">Sign out</button>
+      <br />
+      <br />
       <form id="edit">
-        Editing README file<br />
-        <textarea id="data" disabled>Loading...</textarea>
-        <button id="submit">Save</button>
+        <fieldset>
+          <legend>Editing README file</legend>
+          <textarea id="data" disabled>Loading...</textarea>
+          <button id="submit">Save</button>
+        </fieldset>
       </form>
     </div>
 
